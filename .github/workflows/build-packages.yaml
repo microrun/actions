@@ -1,8 +1,10 @@
 on: [workflow_call]
 jobs:
   build-packages:
-    if: ${{ github.ref != 'refs/heads/main' }}
-    runs-on: ubuntu-22.04
+    strategy:
+        matrix:
+          runner: [ubuntu-22.04, buildjet-4vcpu-ubuntu-2204-arm]
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: docker/setup-qemu-action@e81a89b1732b9c48d79cd809d8d81d79c4647a18
       - uses: actions/checkout@755da8c3cf115ac066823e79a1e1788f8940201b
@@ -17,33 +19,28 @@ jobs:
           PACKAGE_EPOCH=$(yq '.package.epoch' <melange.yaml)
           RELEASE_TAG=$PACKAGE_VERSION-r$PACKAGE_EPOCH
           echo "RELEASE_TAG=$RELEASE_TAG" >> $GITHUB_ENV
+          echo $RELEASE_TAG > RELEASE_TAG
           echo "Determined tag: $RELEASE_TAG"
       - name: Verify that tag doesn't exist yet
         run: |
           git ls-remote --tags --exit-code origin $RELEASE_TAG && echo "Tag exists already" && exit 1 || echo "Tag doesn't exist yet"
+      - uses: actions/upload-artifact@v3
+        with:
+          path: packages
+      - uses: actions/upload-artifact@v3
+        with:
+          path: RELEASE_TAG
   release-packages:
     if: ${{ github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-22.04
+    needs: build-packages
     steps:
-      - uses: docker/setup-qemu-action@e81a89b1732b9c48d79cd809d8d81d79c4647a18
-      - uses: actions/checkout@755da8c3cf115ac066823e79a1e1788f8940201b
-      - uses: chainguard-dev/actions/setup-melange@680ae468cc80b9dcaae5e8be58548a33611749fa
-      - run: echo "${{ secrets.REPO_PRIVATE_KEY }}" > ./melange.rsa
-      - uses: chainguard-dev/actions/melange-build-pkg@680ae468cc80b9dcaae5e8be58548a33611749fa
-        with:
-          archs: x86_64,aarch64
-          config: ${{ github.workspace }}/melange.yaml
-          sign-with-key: true
-      - name: Determine tag based on melange build
+      - uses: actions/download-artifact@v3
+      - name: Read tag into variable
         run: |
-          PACKAGE_VERSION=$(yq '.package.version' <melange.yaml)
-          PACKAGE_EPOCH=$(yq '.package.epoch' <melange.yaml)
-          RELEASE_TAG=$PACKAGE_VERSION-r$PACKAGE_EPOCH
+          RELEASE_TAG=$(<RELEASE_TAG)
           echo "RELEASE_TAG=$RELEASE_TAG" >> $GITHUB_ENV
-          echo "Determined tag: $RELEASE_TAG"
-      - name: Verify that tag doesn't exist yet
-        run: |
-          git ls-remote --tags --exit-code origin $RELEASE_TAG && echo "Tag exists already" && exit 1 || echo "Tag doesn't exist yet"
+          echo "Read tag: $RELEASE_TAG"
       - name: Flatten repository output
         run: |
           # Turns aarch64/some-package.apk into aarch64_some-package.apk

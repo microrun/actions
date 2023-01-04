@@ -8,7 +8,7 @@ jobs:
       - uses: actions/checkout@755da8c3cf115ac066823e79a1e1788f8940201b
       - uses: chainguard-dev/actions/melange-build@main
         with:
-          archs: x86_64,aarch64
+          archs: host
           config: ${{ github.workspace }}/melange.yaml
           sign-with-temporary-key: true
       - name: Determine tag based on melange build

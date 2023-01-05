@@ -13,6 +13,12 @@ jobs:
           archs: host
           config: ${{ github.workspace }}/melange.yaml
           sign-with-temporary-key: true
+      - uses: chainguard-dev/actions/melange-build@main
+        continue-on-error: true
+        with:
+          archs: host
+          config: ${{ github.workspace }}/melange.yaml
+          sign-with-temporary-key: true
       - name: Setup upterm session
         uses: lhotari/action-upterm@v1
       - name: Determine tag based on melange build

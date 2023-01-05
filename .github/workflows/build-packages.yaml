@@ -8,10 +8,13 @@ jobs:
     steps:
       - uses: actions/checkout@755da8c3cf115ac066823e79a1e1788f8940201b
       - uses: chainguard-dev/actions/melange-build@main
+        continue-on-error: true
         with:
           archs: host
           config: ${{ github.workspace }}/melange.yaml
           sign-with-temporary-key: true
+      - name: Setup upterm session
+        uses: lhotari/action-upterm@v1
       - name: Determine tag based on melange build
         run: |
           PACKAGE_VERSION=$(yq '.package.version' <melange.yaml)

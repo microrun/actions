@@ -36,6 +36,8 @@ jobs:
     needs: build-packages
     steps:
       - uses: actions/download-artifact@v3
+        with:
+          path: .
       - name: Read tag into variable
         run: |
           RELEASE_TAG=$(<RELEASE_TAG)
